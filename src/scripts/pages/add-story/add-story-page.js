@@ -13,161 +13,171 @@ export default class AddStoryPage {
 
   async render() {
     return `
-    <div class="container add-story">
-        <h1>Tambah Cerita Baru</h1>
-        
-        <div id="page-loading" class="page-loading" style="display: none;" role="status" aria-live="polite">
-          <div class="loading-spinner"></div>
-          <p>Memuat halaman...</p>
+  <div class="container add-story">
+      <h1>Tambah Cerita Baru</h1>
+      
+      <div id="page-loading" class="page-loading" style="display: none;" role="status" aria-live="polite">
+        <div class="loading-spinner"></div>
+        <p>Memuat halaman...</p>
+      </div>
+
+      <div id="form-section" style="display: none;">
+        <div id="form-loading" class="section-loading" style="display: none;" role="status">
+          <div class="loading-spinner small"></div>
+          <p>Memuat form...</p>
         </div>
 
-        <div id="form-section" style="display: none;">
-          <div id="form-loading" class="section-loading" style="display: none;" role="status">
-            <div class="loading-spinner small"></div>
-            <p>Memuat form...</p>
-          </div>
-          <div id="form-error" class="section-error" style="display: none;" role="alert"></div>
+        <div id="form-error" class="section-error" style="display: none;" role="alert"></div>
 
-          <form id="add-story-form" class="story-form" novalidate>
-            <div class="form-group">
-              <label for="story-description" class="form-label">Deskripsi Cerita *</label>
-              <textarea 
-                id="story-description"
-                class="form-textarea"
-                placeholder="Ceritakan pengalaman menarik Anda di lokasi tersebut..."
-                required
-                minlength="10"
-                maxlength="1000"
-                rows="4"
-                aria-required="true"
-                aria-describedby="description-error description-help"
+        <form id="add-story-form" class="story-form" novalidate>
+          <div class="form-group">
+            <label for="story-description" class="form-label">Deskripsi Cerita</label>
+            <textarea 
+              id="story-description"
+              class="form-textarea"
+              placeholder="Ceritakan pengalaman menarik Anda di lokasi tersebut..."
+              required
+              minlength="10"
+              maxlength="1000"
+              rows="4"
+              aria-required="true"
+              aria-describedby="description-error description-help"
+              aria-invalid="false"
+            ></textarea>
+            <div class="form-error" id="description-error" role="alert"></div>
+            <div class="form-help" id="description-help">
+              Minimal 10 karakter, maksimal 1000 karakter
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div id="file-upload-section" class="photo-option">
+              <label for="story-photo" class="form-label">Pilih file foto</label>
+              <input 
+                type="file" 
+                id="story-photo"
+                class="form-input"
+                accept="image/*"
+                aria-describedby="photo-error photo-help"
                 aria-invalid="false"
-              ></textarea>
-              <div class="form-error" id="description-error" role="alert"></div>
-              <div class="form-help" id="description-help">Minimal 10 karakter, maksimal 1000 karakter</div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Foto *</label>
-
-              <div id="file-upload-section" class="photo-option">
-                <input 
-                  type="file" 
-                  id="story-photo"
-                  class="form-input"
-                  accept="image/*"
-                  aria-describedby="photo-error photo-help"
-                  aria-invalid="false"
-                >
-                <div class="form-help" id="photo-help">Format: JPG, PNG, GIF. Maksimal 2MB</div>
-                
-                <div class="photo-option-divider">
-                  <span>atau</span>
-                </div>
-
-                <button type="button" id="camera-button" class="camera-button">
-                  Ambil Foto dengan Kamera
-                </button>
-                <div class="form-help">Ambil foto langsung menggunakan kamera perangkat Anda</div>
+              >
+              <div class="form-help" id="photo-help">
+                Format: JPG, PNG, GIF. Maksimal 2MB
               </div>
 
-              <div id="camera-section" class="camera-section" style="display: none;">
-                <div class="camera-header">
-                  <h3>Ambil Foto</h3>
-                  <button type="button" id="close-camera" class="close-camera-button">Tutup Kamera</button>
-                </div>
-                
-                <div id="camera-error" class="camera-error" style="display: none;" role="alert"></div>
-                
-                <div class="camera-preview">
-                  <video id="camera-video" autoplay playsinline></video>
-                  <canvas id="camera-canvas" style="display: none;"></canvas>
-                </div>
-                
-                <div class="camera-controls">
-                  <button type="button" id="switch-camera" class="switch-camera-button" title="Ganti Kamera">
-                    Ganti Kamera
-                  </button>
-                  <button type="button" id="capture-button" class="capture-button">
-                    Ambil Foto
-                  </button>
-                  <button type="button" id="retake-button" class="retake-button" style="display: none;">
-                    Ambil Ulang
-                  </button>
-                </div>
-                
-                <div class="camera-instruction">
-                  <small>Posisikan objek dalam frame dan klik "Ambil Foto"</small>
-                </div>
-              </div>
+              <div class="photo-option-divider"><span>atau</span></div>
 
-              <div class="form-error" id="photo-error" role="alert"></div>
-
-              <div id="photo-preview" class="photo-preview" role="region" aria-label="Preview foto"></div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Lokasi *</label>
-              <div id="location-status" class="location-status" role="status" aria-live="polite">
-                <span style="color: blue;">Mendeteksi lokasi Anda...</span>
-              </div>
-              <div id="map-loading" class="section-loading" style="display: none;" role="status">
-                <div class="loading-spinner small"></div>
-                <p>Memuat peta...</p>
-              </div>
-              <div id="map-error" class="section-error" style="display: none;" role="alert"></div>
-              <div class="map-container">
-                <div id="location-map" class="location-map" role="application" aria-label="Peta pemilihan lokasi" tabindex="0"></div>
-              </div>
-              <div class="location-info">
-                <small>Lokasi saat ini akan otomatis terdeteksi. Klik pada peta untuk mengubah lokasi</small>
-                <div id="selected-location" class="selected-location" role="status"></div>
-              </div>
-            </div>
-
-            <div class="form-actions">
-              <button type="button" class="cancel-button" id="cancel-button">Batal</button>
-              <button type="submit" class="submit-button" id="submit-button" disabled>
-                <span class="button-text">Tambah Cerita</span>
-                <div class="button-loading" style="display: none;">
-                  <div class="loading-spinner white small"></div>
-                  <span>Mengunggah...</span>
-                </div>
+              <button type="button" id="camera-button" class="camera-button">
+                Ambil Foto dengan Kamera
               </button>
+              <div class="form-help">
+                Ambil foto langsung menggunakan kamera perangkat Anda
+              </div>
             </div>
-          </form>
-        </div>
 
-        <div id="submit-loading" class="submit-loading-overlay" style="display: none;" role="status" aria-live="polite">
-          <div class="loading-content">
-            <div class="loading-spinner large"></div>
-            <h3>Menambahkan Cerita...</h3>
-            <p>Cerita Anda sedang diunggah, harap tunggu sebentar.</p>
-            <div class="progress-bar">
-              <div class="progress-fill"></div>
+            <div id="camera-section" class="camera-section" style="display: none;">
+              <div class="camera-header">
+                <h2>Ambil Foto</h2>
+                <button type="button" id="close-camera" class="close-camera-button">
+                  Tutup Kamera
+                </button>
+              </div>
+
+              <div id="camera-error" class="camera-error" style="display: none;" role="alert"></div>
+
+              <div class="camera-preview">
+                <video id="camera-video" autoplay playsinline></video>
+                <canvas id="camera-canvas" style="display: none;"></canvas>
+              </div>
+
+              <div class="camera-controls">
+                <button type="button" id="switch-camera" class="switch-camera-button" title="Ganti Kamera">
+                  Ganti Kamera
+                </button>
+                <button type="button" id="capture-button" class="capture-button">
+                  Ambil Foto
+                </button>
+                <button type="button" id="retake-button" class="retake-button" style="display: none;">
+                  Ambil Ulang
+                </button>
+              </div>
+
+              <div class="camera-instruction">
+                <small>Posisikan objek dalam frame dan klik "Ambil Foto"</small>
+              </div>
+            </div>
+
+            <div class="form-error" id="photo-error" role="alert"></div>
+            <div id="photo-preview" class="photo-preview" role="region" aria-label="Preview foto"></div>
+          </div>
+
+          <div class="form-group">
+            <h2 class="form-label">Lokasi *</h2>
+            <div id="location-status" class="location-status" role="status" aria-live="polite">
+              <span style="color: blue;">Mendeteksi lokasi Anda...</span>
+            </div>
+
+            <div id="map-loading" class="section-loading" style="display: none;" role="status">
+              <div class="loading-spinner small"></div>
+              <p>Memuat peta...</p>
+            </div>
+
+            <div id="map-error" class="section-error" style="display: none;" role="alert"></div>
+
+            <div class="map-container">
+              <div id="location-map" class="location-map" role="application" aria-label="Peta pemilihan lokasi" tabindex="0"></div>
+            </div>
+
+            <div class="location-info">
+              <small>Lokasi saat ini akan otomatis terdeteksi. Klik pada peta untuk mengubah lokasi</small>
+              <div id="selected-location" class="selected-location" role="status"></div>
             </div>
           </div>
-        </div>
 
-        <div id="success-message" class="success-message" style="display: none;" role="status" aria-live="polite">
-          <div class="success-content">
-            <div class="success-icon">✅</div>
-            <h3>Berhasil!</h3>
-            <p id="success-text"></p>
+          <div class="form-actions">
+            <button type="button" class="cancel-button" id="cancel-button">Batal</button>
+            <button type="submit" class="submit-button" id="submit-button" disabled>
+              <span class="button-text">Tambah Cerita</span>
+              <div class="button-loading" style="display: none;">
+                <div class="loading-spinner white small"></div>
+                <span>Mengunggah...</span>
+              </div>
+            </button>
           </div>
-        </div>
-        
-        <div id="error-message" class="error-message" style="display: none;" role="alert" aria-live="assertive">
-          <div class="error-content">
-            <div class="error-icon">❌</div>
-            <h3>Terjadi Kesalahan</h3>
-            <p id="error-text"></p>
-            <button type="button" class="retry-button" id="retry-button">Coba Lagi</button>
+        </form>
+      </div>
+
+      <div id="submit-loading" class="submit-loading-overlay" style="display: none;" role="status" aria-live="polite">
+        <div class="loading-content">
+          <div class="loading-spinner large"></div>
+          <h2>Menambahkan Cerita...</h2>
+          <p>Cerita Anda sedang diunggah, harap tunggu sebentar.</p>
+          <div class="progress-bar">
+            <div class="progress-fill"></div>
           </div>
         </div>
       </div>
-    `;
+
+      <div id="success-message" class="success-message" style="display: none;" role="status" aria-live="polite">
+        <div class="success-content">
+          <div class="success-icon">✅</div>
+          <h2>Berhasil!</h2>
+          <p id="success-text"></p>
+        </div>
+      </div>
+
+      <div id="error-message" class="error-message" style="display: none;" role="alert" aria-live="assertive">
+        <div class="error-content">
+          <div class="error-icon">❌</div>
+          <h2>Terjadi Kesalahan</h2>
+          <p id="error-text"></p>
+          <button type="button" class="retry-button" id="retry-button">Coba Lagi</button>
+        </div>
+      </div>
+    </div>
+  `;
   }
+
 
   async afterRender() {
     try {

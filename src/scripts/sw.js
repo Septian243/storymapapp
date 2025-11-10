@@ -1,37 +1,55 @@
-/* ===== Workbox Integration ===== */
 import { precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
-import { StaleWhileRevalidate, CacheFirst, NetworkFirst } from 'workbox-strategies';
+import { StaleWhileRevalidate, CacheFirst, NetworkFirst, NetworkOnly } from 'workbox-strategies';
+import { CacheableResponsePlugin } from 'workbox-cacheable-response';
+import { ExpirationPlugin } from 'workbox-expiration';
 
-// 🧩 Ini baris wajib untuk InjectManifest — Workbox akan inject file build di sini
 precacheAndRoute(self.__WB_MANIFEST || []);
 
-/* ===== Custom Cache Names ===== */
 const STATIC_CACHE = 'story-app-static-v1';
 const DYNAMIC_CACHE = 'story-app-dynamic-v1';
 const API_CACHE = 'story-app-api-v1';
 const IMAGE_CACHE = 'story-app-image-v1';
 
-/* ===== Manual Routing Tambahan ===== */
-
-// API Story Dicoding
 registerRoute(
-    ({ url }) => url.origin === 'https://story-api.dicoding.dev',
+    ({ url, request }) =>
+        url.origin === 'https://story-api.dicoding.dev' &&
+        url.pathname === '/v1/stories' &&
+        request.method === 'GET',
+    new NetworkOnly()
+);
+
+registerRoute(
+    ({ url, request }) =>
+        url.origin === 'https://story-api.dicoding.dev' &&
+        url.pathname !== '/v1/stories',
     new NetworkFirst({
         cacheName: API_CACHE,
-        networkTimeoutSeconds: 3,
+        networkTimeoutSeconds: 5,
+        plugins: [
+            new CacheableResponsePlugin({
+                statuses: [0, 200],
+            }),
+        ],
     })
 );
 
-// Gambar
 registerRoute(
     ({ request }) => request.destination === 'image',
-    new StaleWhileRevalidate({
+    new CacheFirst({
         cacheName: IMAGE_CACHE,
+        plugins: [
+            new CacheableResponsePlugin({
+                statuses: [0, 200],
+            }),
+            new ExpirationPlugin({
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 30,
+            }),
+        ],
     })
 );
 
-// Font, script, style dari CDN
 registerRoute(
     ({ request, url }) =>
         ['style', 'script', 'font'].includes(request.destination) &&
@@ -40,21 +58,27 @@ registerRoute(
             url.hostname.includes('cdnjs.cloudflare.com')),
     new StaleWhileRevalidate({
         cacheName: STATIC_CACHE,
+        plugins: [
+            new CacheableResponsePlugin({
+                statuses: [0, 200],
+            }),
+        ],
     })
 );
 
-// Offline fallback untuk navigasi
 registerRoute(
     ({ request }) => request.mode === 'navigate',
     new NetworkFirst({
         cacheName: DYNAMIC_CACHE,
         networkTimeoutSeconds: 3,
+        plugins: [
+            new CacheableResponsePlugin({
+                statuses: [0, 200],
+            }),
+        ],
     })
 );
 
-/* ===== Manual Custom Logic Tambahan (Push, Message, dll) ===== */
-
-// Preload gambar lewat pesan dari halaman
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'CACHE_IMAGES') {
         const imageUrls = event.data.urls || [];
@@ -66,18 +90,23 @@ self.addEventListener('message', (event) => {
                         const response = await fetch(url);
                         if (response && response.status === 200) {
                             await cache.put(url, response);
-                            console.log('✅ Preloaded:', url);
+                            console.log('✅ Preloaded image:', url);
                         }
                     }
                 } catch (err) {
-                    console.warn('❌ Failed to preload:', url, err);
+                    console.warn('❌ Failed to preload image:', url, err);
                 }
             });
         });
     }
+
+    if (event.data && event.data.type === 'CLEAR_API_CACHE') {
+        caches.delete(API_CACHE).then(() => {
+            console.log('✅ API cache cleared');
+        });
+    }
 });
 
-/* ===== Push Notification ===== */
 self.addEventListener('push', (event) => {
     let data = {};
     if (event.data) {
@@ -103,7 +132,6 @@ self.addEventListener('push', (event) => {
     event.waitUntil(self.registration.showNotification(title, options));
 });
 
-/* ===== Notification Click ===== */
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
     event.waitUntil(

@@ -39,16 +39,6 @@ const IDBHelper = {
         return db.put(STORE_NAME, story);
     },
 
-    async saveStories(stories) {
-        const db = await dbPromise;
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-
-        await Promise.all([
-            ...stories.map(story => tx.store.put(story)),
-            tx.done,
-        ]);
-    },
-
     async deleteStory(id) {
         const db = await dbPromise;
         return db.delete(STORE_NAME, id);
@@ -57,6 +47,17 @@ const IDBHelper = {
     async clearAllStories() {
         const db = await dbPromise;
         return db.clear(STORE_NAME);
+    },
+
+    async isStorySaved(id) {
+        const db = await dbPromise;
+        const story = await db.get(STORE_NAME, id);
+        return !!story;
+    },
+
+    async getSavedStoryIds() {
+        const stories = await this.getAllStories();
+        return stories.map(s => s.id);
     },
 
     async searchStories(query) {
@@ -174,32 +175,6 @@ const IDBHelper = {
     async hasPendingStories() {
         const pending = await this.getAllPendingStories();
         return pending.length > 0;
-    },
-
-    async getAllStoriesWithPending() {
-        try {
-            const [syncedStories, pendingStories] = await Promise.all([
-                this.getAllStories(),
-                this.getAllPendingStories()
-            ]);
-
-            const markedPending = pendingStories.map(story => ({
-                id: `pending-${story.tempId}`,
-                name: story.name || 'Pengguna',
-                description: story.description,
-                lat: story.lat,
-                lon: story.lon,
-                createdAt: story.createdAt,
-                isPending: true,
-                photoBlob: story.photoBlob
-            }));
-
-            return [...markedPending, ...syncedStories];
-        } catch (error) {
-            console.error('Error getting all stories with pending:', error);
-
-            return await this.getAllStories();
-        }
     }
 };
 

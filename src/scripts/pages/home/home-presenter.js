@@ -7,13 +7,16 @@ export default class HomePresenter {
     #currentSort = 'createdAt';
     #currentOrder = 'desc';
     #searchQuery = '';
-    #apiStoryIds = [];
+    #savedStoryIds = [];
     #lastFetchTime = null;
     #cacheDuration = 5 * 60 * 1000;
+    #lastApiStories = [];
 
     constructor({ view, model }) {
         this.#view = view;
         this.#model = model;
+
+        this.#loadCachedApiStories();
     }
 
     async show() {
@@ -21,101 +24,105 @@ export default class HomePresenter {
             this.#view.showMapLoading();
             await this.#view.initializeMap();
 
-            this.#loadApiStoryIdsFromCache();
+            await this.#loadSavedStoryIds();
             await this.#loadAndDisplayStories();
 
             window.addEventListener('stories-synced', () => {
                 console.log('🔄 Stories synced, reloading...');
-                this.#loadAndDisplayStories();
+                this.refresh();
             });
 
         } catch (error) {
             console.error('HomePresenter.show() error:', error);
-            this.#view.showGlobalError('Gagal memuat halaman. Silakan refresh.');
+            if (this.#view) {
+                this.#view.showGlobalError?.('Gagal memuat halaman. Silakan refresh.');
+            }
         } finally {
-            this.#view.hideMapLoading();
+            if (this.#view) {
+                this.#view.hideMapLoading();
+            }
         }
     }
 
-    #saveApiStoryIdsToCache() {
-        try {
-            localStorage.setItem('apiStoryIds', JSON.stringify(this.#apiStoryIds));
-            localStorage.setItem('apiStoryIdsTimestamp', Date.now().toString());
-        } catch (error) {
-            console.warn('Failed to save API IDs to cache:', error);
-        }
+    async #loadSavedStoryIds() {
+        this.#savedStoryIds = await IDBHelper.getSavedStoryIds();
+        console.log('📦 Loaded saved story IDs:', this.#savedStoryIds.length);
     }
 
-    #loadApiStoryIdsFromCache() {
+    #loadCachedApiStories() {
         try {
-            const cachedIds = localStorage.getItem('apiStoryIds');
-            const timestamp = localStorage.getItem('apiStoryIdsTimestamp');
-
-            if (cachedIds && timestamp) {
-                const age = Date.now() - parseInt(timestamp);
-                if (age < 60 * 60 * 1000) {
-                    this.#apiStoryIds = JSON.parse(cachedIds);
-                    console.log('📦 Loaded API IDs from cache:', this.#apiStoryIds.length);
-                }
+            const cached = sessionStorage.getItem('cachedApiStories');
+            if (cached) {
+                this.#lastApiStories = JSON.parse(cached);
+                console.log('📦 Loaded cached API stories:', this.#lastApiStories.length);
             }
         } catch (error) {
-            console.warn('Failed to load API IDs from cache:', error);
+            console.warn('Failed to load cached API stories:', error);
+            this.#lastApiStories = [];
+        }
+    }
+
+    #saveCachedApiStories(stories) {
+        try {
+            sessionStorage.setItem('cachedApiStories', JSON.stringify(stories));
+            this.#lastApiStories = stories;
+        } catch (error) {
+            console.warn('Failed to save cached API stories:', error);
         }
     }
 
     async #loadAndDisplayStories() {
         try {
+            if (!this.#view) {
+                console.warn('View is null, skipping load');
+                return;
+            }
+
             this.#view.showStoriesLoading?.();
 
             let apiStories = [];
-            let allStories = [];
-            let shouldFetchFromApi = false;
 
-            const now = Date.now();
-            const cacheAge = this.#lastFetchTime ? now - this.#lastFetchTime : Infinity;
-
-            if (navigator.onLine && cacheAge > this.#cacheDuration) {
-                shouldFetchFromApi = true;
-            }
-
-            if (shouldFetchFromApi) {
-                console.log('🌐 Fetching from API (cache expired or first load)...');
+            if (navigator.onLine) {
+                console.log('🌐 Fetching from API...');
                 try {
                     const response = await this.#model.getStories();
 
                     if (!response.error && response.listStory) {
                         apiStories = response.listStory;
-                        this.#apiStoryIds = apiStories.map(s => s.id);
-                        this.#lastFetchTime = now;
-                        this.#saveApiStoryIdsToCache();
-                        await IDBHelper.saveStories(apiStories);
-                        console.log('✅ Stories saved to IndexedDB');
+                        this.#lastFetchTime = Date.now();
+                        this.#saveCachedApiStories(apiStories);
+
+                        console.log('✅ Fetched from API:', apiStories.length, 'stories');
                     }
                 } catch (apiError) {
-                    console.warn('⚠️ API failed, using cached data:', apiError);
+                    console.warn('⚠️ API failed, using cached stories:', apiError);
+                    apiStories = this.#lastApiStories;
                 }
             } else {
-                console.log('📦 Using cached data (fresh or offline)');
+                console.log('📴 Offline mode - using cached API stories');
+                apiStories = this.#lastApiStories;
             }
 
-            const idbStories = await IDBHelper.getAllStories();
+            const savedStories = await IDBHelper.getAllStories();
             const pendingStories = await IDBHelper.getAllPendingStories();
 
-            console.log(`📊 Loaded from IDB: ${idbStories.length} stories, ${pendingStories.length} pending`);
+            console.log(`📊 API: ${apiStories.length}, Saved: ${savedStories.length}, Pending: ${pendingStories.length}`);
 
-            if (this.#apiStoryIds.length === 0 && idbStories.length > 0) {
-                console.log('⚠️ No API IDs available, assuming all IDB stories are online');
-                this.#apiStoryIds = idbStories.map(s => s.id);
-            }
+            await this.#loadSavedStoryIds();
 
-            const markedIdbStories = idbStories.map(story => {
-                const isInApi = this.#apiStoryIds.includes(story.id);
-                return {
-                    ...story,
-                    isOffline: this.#apiStoryIds.length > 0 && !isInApi,
-                    isPending: false
-                };
-            });
+            const markedApiStories = apiStories.map(story => ({
+                ...story,
+                isSaved: this.#savedStoryIds.includes(story.id),
+                isPending: false,
+                isOnline: true
+            }));
+
+            const markedSavedStories = savedStories.map(story => ({
+                ...story,
+                isSaved: true,
+                isPending: false,
+                isOnline: false
+            }));
 
             const markedPendingStories = pendingStories.map(story => ({
                 id: `pending-${story.tempId}`,
@@ -125,15 +132,32 @@ export default class HomePresenter {
                 lon: story.lon,
                 createdAt: story.createdAt,
                 isPending: true,
-                isOffline: false,
+                isSaved: false,
+                isOnline: false,
                 photoBlob: story.photoBlob,
                 photoBase64: story.photoBase64
             }));
 
-            allStories = [...markedPendingStories, ...markedIdbStories];
+            const savedIds = new Set(savedStories.map(s => s.id));
+            const uniqueApiStories = markedApiStories.filter(s => !savedIds.has(s.id));
+
+            let allStories = [...markedPendingStories, ...markedSavedStories, ...uniqueApiStories];
+
+            console.log('📦 Before filter - All stories:', allStories.length);
+            console.log('  - Pending:', markedPendingStories.length);
+            console.log('  - Saved:', markedSavedStories.length);
+            console.log('  - Unique API:', uniqueApiStories.length);
+
             allStories = await this.#applyFiltersAndSort(allStories);
 
+            console.log('📦 After filter - Filtered stories:', allStories.length);
+
             const storiesWithLocation = allStories.filter(story => story.lat && story.lon);
+
+            if (!this.#view) {
+                console.warn('View was destroyed during load');
+                return;
+            }
 
             this.#view.displayStories(allStories);
             this.#view.displayMapStories(storiesWithLocation);
@@ -143,9 +167,13 @@ export default class HomePresenter {
 
         } catch (error) {
             console.error('HomePresenter.#loadAndDisplayStories error:', error);
-            this.#view.showStoriesError('Gagal memuat daftar cerita.');
+            if (this.#view) {
+                this.#view.showStoriesError?.('Gagal memuat daftar cerita.');
+            }
         } finally {
-            this.#view.hideStoriesLoading?.();
+            if (this.#view) {
+                this.#view.hideStoriesLoading?.();
+            }
         }
     }
 
@@ -171,10 +199,10 @@ export default class HomePresenter {
 
         if (this.#currentFilter === 'pending') {
             filteredStories = filteredStories.filter(s => s.isPending);
-        } else if (this.#currentFilter === 'offline') {
-            filteredStories = filteredStories.filter(s => s.isOffline && !s.isPending);
+        } else if (this.#currentFilter === 'saved') {
+            filteredStories = filteredStories.filter(s => s.isSaved && !s.isPending);
         } else if (this.#currentFilter === 'online') {
-            filteredStories = filteredStories.filter(s => !s.isPending && !s.isOffline);
+            filteredStories = filteredStories.filter(s => !s.isPending && !s.isSaved);
         }
 
         if (this.#searchQuery.trim()) {
@@ -205,10 +233,10 @@ export default class HomePresenter {
     #updateStoriesCount(stories) {
         const totalCount = stories.length;
         const pendingCount = stories.filter(s => s.isPending).length;
-        const offlineCount = stories.filter(s => s.isOffline && !s.isPending).length;
-        const onlineCount = stories.filter(s => !s.isPending && !s.isOffline).length;
+        const savedCount = stories.filter(s => s.isSaved && !s.isPending).length;
+        const onlineCount = stories.filter(s => !s.isPending && !s.isSaved).length;
 
-        console.log(`📊 Stories: ${totalCount} total, ${onlineCount} online, ${offlineCount} offline, ${pendingCount} pending`);
+        console.log(`📊 Stories: ${totalCount} total, ${onlineCount} online, ${savedCount} saved, ${pendingCount} pending`);
     }
 
     async setFilter(filter) {
@@ -229,15 +257,48 @@ export default class HomePresenter {
 
     async #refilterStories() {
         try {
+            if (!this.#view) {
+                console.warn('View is null, skipping refilter');
+                return;
+            }
+
             this.#view.showStoriesLoading?.();
 
-            const idbStories = await IDBHelper.getAllStories();
+            let apiStories = [];
+
+            if (navigator.onLine) {
+                try {
+                    const response = await this.#model.getStories();
+                    if (!response.error && response.listStory) {
+                        apiStories = response.listStory;
+                        this.#saveCachedApiStories(apiStories);
+                    }
+                } catch (error) {
+                    console.warn('Failed to fetch from API during refilter:', error);
+                    apiStories = this.#lastApiStories;
+                }
+            } else {
+                console.log('📴 Offline mode - using cached stories for refilter');
+                apiStories = this.#lastApiStories;
+            }
+
+            const savedStories = await IDBHelper.getAllStories();
             const pendingStories = await IDBHelper.getAllPendingStories();
 
-            const markedIdbStories = idbStories.map(story => ({
+            await this.#loadSavedStoryIds();
+
+            const markedApiStories = apiStories.map(story => ({
                 ...story,
-                isOffline: this.#apiStoryIds.length > 0 && !this.#apiStoryIds.includes(story.id),
-                isPending: false
+                isSaved: this.#savedStoryIds.includes(story.id),
+                isPending: false,
+                isOnline: true
+            }));
+
+            const markedSavedStories = savedStories.map(story => ({
+                ...story,
+                isSaved: true,
+                isPending: false,
+                isOnline: false
             }));
 
             const markedPendingStories = pendingStories.map(story => ({
@@ -248,15 +309,33 @@ export default class HomePresenter {
                 lon: story.lon,
                 createdAt: story.createdAt,
                 isPending: true,
-                isOffline: false,
+                isSaved: false,
+                isOnline: false,
                 photoBlob: story.photoBlob,
                 photoBase64: story.photoBase64
             }));
 
-            let allStories = [...markedPendingStories, ...markedIdbStories];
+            const savedIds = new Set(savedStories.map(s => s.id));
+            const uniqueApiStories = markedApiStories.filter(s => !savedIds.has(s.id));
+
+            let allStories = [...markedPendingStories, ...markedSavedStories, ...uniqueApiStories];
+
+            console.log('🔄 Refilter - Before filter:', allStories.length);
+            console.log('  - Current filter:', this.#currentFilter);
+            console.log('  - Pending:', markedPendingStories.length);
+            console.log('  - Saved:', markedSavedStories.length);
+            console.log('  - Unique API:', uniqueApiStories.length);
+
             allStories = await this.#applyFiltersAndSort(allStories);
 
+            console.log('🔄 Refilter - After filter:', allStories.length);
+
             const storiesWithLocation = allStories.filter(story => story.lat && story.lon);
+
+            if (!this.#view) {
+                console.warn('View was destroyed during refilter');
+                return;
+            }
 
             this.#view.displayStories(allStories);
             this.#view.displayMapStories(storiesWithLocation);
@@ -265,27 +344,63 @@ export default class HomePresenter {
         } catch (error) {
             console.error('Error refiltering stories:', error);
         } finally {
-            this.#view.hideStoriesLoading?.();
+            if (this.#view) {
+                this.#view.hideStoriesLoading?.();
+            }
         }
     }
 
     async refresh() {
         console.log('🔄 Force refresh from API...');
+
         this.#lastFetchTime = null;
+
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+                type: 'CLEAR_API_CACHE'
+            });
+        }
+
         await this.#loadAndDisplayStories();
     }
 
-    async deleteStory(storyId, isPending, isOffline) {
+    async saveStory(storyId) {
+        try {
+            let story = this.#lastApiStories.find(s => s.id === storyId);
+
+            if (!story && navigator.onLine) {
+                const response = await this.#model.getStories();
+
+                if (!response.error && response.listStory) {
+                    story = response.listStory.find(s => s.id === storyId);
+                }
+            }
+
+            if (story) {
+                await IDBHelper.saveStory(story);
+                console.log('✅ Story saved:', storyId);
+                this.#view.showSaveSuccess('Cerita berhasil disimpan!');
+                await this.#refilterStories();
+            } else {
+                this.#view.showGlobalError('Cerita tidak ditemukan.');
+            }
+        } catch (error) {
+            console.error('Error saving story:', error);
+            this.#view.showGlobalError('Gagal menyimpan cerita: ' + error.message);
+        }
+    }
+
+    async deleteStory(storyId, isPending, isSaved) {
         try {
             if (isPending) {
                 const tempId = parseInt(storyId.replace('pending-', ''));
                 await IDBHelper.deletePendingStory(tempId);
                 console.log('✅ Deleted pending story:', tempId);
                 this.#view.showDeleteSuccess('Cerita pending berhasil dihapus!');
-            } else if (isOffline) {
+            } else if (isSaved) {
                 await IDBHelper.deleteStory(storyId);
-                console.log('✅ Deleted offline story:', storyId);
-                this.#view.showDeleteSuccess('Cerita offline berhasil dihapus dari cache!');
+                console.log('✅ Deleted saved story:', storyId);
+                this.#view.showDeleteSuccess('Cerita berhasil dihapus dari penyimpanan!');
             }
 
             await this.#refilterStories();
@@ -296,27 +411,19 @@ export default class HomePresenter {
         }
     }
 
-    async clearOfflineStories() {
+    async clearSavedStories() {
         try {
-            const idbStories = await IDBHelper.getAllStories();
-            const offlineStories = idbStories.filter(s =>
-                this.#apiStoryIds.length > 0 && !this.#apiStoryIds.includes(s.id)
-            );
-
-            for (const story of offlineStories) {
-                await IDBHelper.deleteStory(story.id);
-            }
-
+            await IDBHelper.clearAllStories();
             await IDBHelper.clearPendingStories();
 
-            console.log('✅ Offline and pending stories cleared');
-            this.#view.showDeleteSuccess('Semua cerita offline dan pending berhasil dihapus!');
+            console.log('✅ All saved and pending stories cleared');
+            this.#view.showDeleteSuccess('Semua cerita tersimpan dan pending berhasil dihapus!');
 
             await this.#refilterStories();
 
         } catch (error) {
-            console.error('Error clearing offline stories:', error);
-            this.#view.showGlobalError('Gagal menghapus cerita offline: ' + error.message);
+            console.error('Error clearing saved stories:', error);
+            this.#view.showGlobalError('Gagal menghapus cerita tersimpan: ' + error.message);
         }
     }
 }

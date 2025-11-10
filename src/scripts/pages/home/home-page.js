@@ -32,9 +32,12 @@ export default class HomePage {
           <div class="stories-header">
             <h2>Cerita Terbaru</h2>
             
-            <!-- SKILLED: Search, Filter, Sort Controls -->
-            <div class="stories-controls">
+            <!-- Improved Controls Layout -->
+            <div class="stories-controls-wrapper">
+              <!-- Search Box -->
               <div class="search-box">
+                <label for="story-search" class="visually-hidden">Cari cerita</label>
+                <span class="search-icon">🔍</span>
                 <input 
                   type="search" 
                   id="story-search" 
@@ -43,22 +46,24 @@ export default class HomePage {
                 >
               </div>
               
+              <!-- Filter Buttons -->
               <div class="filter-buttons">
-                <button class="filter-btn active" data-filter="all" aria-label="Tampilkan semua cerita">
+                <button class="filter-btn active" data-tab="all" aria-label="Tampilkan semua cerita">
                   Semua
                 </button>
-                <button class="filter-btn" data-filter="online" aria-label="Tampilkan cerita online">
+                <button class="filter-btn" data-tab="online" aria-label="Tampilkan cerita online">
                   ✅ Online
                 </button>
-                <button class="filter-btn" data-filter="offline" aria-label="Tampilkan cerita offline (hanya di cache)">
-                  💾 Offline
+                <button class="filter-btn" data-tab="saved" aria-label="Tampilkan cerita tersimpan">
+                  💾 Tersimpan
                 </button>
-                <button class="filter-btn" data-filter="pending" aria-label="Tampilkan cerita pending">
-                  📴 Pending
+                <button class="filter-btn" data-tab="pending" aria-label="Tampilkan cerita pending">
+                  📦 Pending
                 </button>
               </div>
               
-              <div class="sort-controls">
+              <!-- Sort Dropdown -->
+              <div class="sort-wrapper">
                 <label for="sort-select">Urutkan:</label>
                 <select id="sort-select" aria-label="Pilih urutan cerita">
                   <option value="createdAt-desc">Terbaru</option>
@@ -68,13 +73,13 @@ export default class HomePage {
                 </select>
               </div>
               
-              <button id="refresh-stories" class="refresh-btn" aria-label="Refresh cerita">
+              <!-- Action Buttons -->
+              <button id="refresh-stories" class="action-btn refresh-btn" aria-label="Refresh cerita">
                 🔄 Refresh
               </button>
               
-              <!-- BASIC: Clear All Button - Hanya untuk data offline/pending -->
-              <button id="clear-offline-stories" class="clear-all-btn" aria-label="Hapus semua cerita offline dari cache">
-                🗑️ Clear Offline Data
+              <button id="clear-saved-stories" class="action-btn clear-btn" aria-label="Hapus semua cerita tersimpan dari cache">
+                🗑️ Clear Cache
               </button>
             </div>
           </div>
@@ -87,13 +92,13 @@ export default class HomePage {
       </div>
 
       <!-- Modal Konfirmasi Delete -->
-      <div id="delete-modal" class="modal" style="display:none;">
+      <div id="delete-modal" class="modal" style="display:none;" role="dialog" aria-labelledby="delete-modal-title" aria-modal="true">
         <div class="modal-content">
-          <h3>Hapus Cerita?</h3>
-          <p id="delete-modal-text">Apakah Anda yakin ingin menghapus cerita ini?</p>
+          <h2 id="delete-modal-title">Konfirmasi</h2>
+          <p id="delete-modal-text">Apakah Anda yakin?</p>
           <div class="modal-actions">
             <button id="cancel-delete" class="cancel-btn">Batal</button>
-            <button id="confirm-delete" class="delete-btn">Hapus</button>
+            <button id="confirm-delete" class="delete-btn">Ya</button>
           </div>
         </div>
       </div>
@@ -126,7 +131,7 @@ export default class HomePage {
     const filterButtons = document.querySelectorAll('.filter-btn');
     const sortSelect = document.getElementById('sort-select');
     const refreshBtn = document.getElementById('refresh-stories');
-    const clearOfflineBtn = document.getElementById('clear-offline-stories');
+    const clearSavedBtn = document.getElementById('clear-saved-stories');
 
     if (searchInput) {
       let searchTimeout;
@@ -143,8 +148,8 @@ export default class HomePage {
         btn.addEventListener('click', () => {
           filterButtons.forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
-          const filter = btn.dataset.filter;
-          this.#presenter.setFilter(filter);
+          const tab = btn.dataset.tab;
+          this.#presenter.setFilter(tab);
         });
       });
     }
@@ -162,9 +167,9 @@ export default class HomePage {
       });
     }
 
-    if (clearOfflineBtn) {
-      clearOfflineBtn.addEventListener('click', () => {
-        this.showClearOfflineConfirmation();
+    if (clearSavedBtn) {
+      clearSavedBtn.addEventListener('click', () => {
+        this.showClearSavedConfirmation();
       });
     }
   }
@@ -270,58 +275,68 @@ export default class HomePage {
     const list = document.getElementById('stories-list');
     const countEl = document.getElementById('stories-count');
 
+    console.log('📊 Displaying stories:', stories.length);
+    if (stories.length > 0) {
+      console.log('🔍 Sample story:', stories[0]);
+    }
+
     sessionStorage.setItem('allStories', JSON.stringify(stories));
 
     const totalCount = stories.length;
     const pendingCount = stories.filter(s => s.isPending).length;
-    const offlineCount = stories.filter(s => s.isOffline).length;
-    const onlineCount = totalCount - pendingCount - offlineCount;
+    const savedCount = stories.filter(s => s.isSaved).length;
+    const onlineCount = stories.filter(s => !s.isPending && !s.isSaved).length;
 
     if (countEl) {
       countEl.innerHTML = `
-        <strong>Total:</strong> ${totalCount} cerita | 
-        <span style="color: green;">✅ Online: ${onlineCount}</span> | 
-        <span style="color: blue;">💾 Offline: ${offlineCount}</span> |
-        <span style="color: orange;">📴 Pending: ${pendingCount}</span>
+        <strong>Total: ${totalCount} cerita</strong>
+        <span>🌐 Online: ${onlineCount}</span>
+        <span>💾 Tersimpan: ${savedCount}</span>
+        <span>⏳ Pending: ${pendingCount}</span>
       `;
     }
 
     list.innerHTML = stories.length
       ? stories.map((s, index) => {
         const isPending = s.isPending;
-        const isOffline = s.isOffline;
-        const isOnlineOnly = !isPending && !isOffline;
+        const isSaved = s.isSaved;
+        const isOnline = !isPending && !isSaved;
 
         let cardClass = '';
         let badge = '';
 
         if (isPending) {
           cardClass = 'pending';
-          badge = '📴 Pending';
-        } else if (isOffline) {
-          cardClass = 'offline';
-          badge = '💾 Offline';
+          badge = '⏳ Pending';
+        } else if (isSaved) {
+          cardClass = 'saved';
+          badge = '💾 Tersimpan';
         }
 
-        let photoUrl = 'https://via.placeholder.com/300x200?text=No+Image';
+        let photoUrl = '';
 
         if (isPending && s.photoBase64) {
           photoUrl = s.photoBase64;
         } else if (s.photoUrl) {
           photoUrl = s.photoUrl;
+        } else {
+          photoUrl = 'https://placehold.co/300x200/e9ecef/6c757d?text=Tidak+Ada+Gambar';
         }
+
+        const imgOnError = `this.onerror=null; this.src='https://placehold.co/300x200/e9ecef/6c757d?text=Gambar+Tidak+Tersedia';`;
 
         return `
             <article class="story-card ${cardClass}" tabindex="0" role="article" aria-labelledby="story-title-${s.id}">
-              ${badge ? `<div class="story-badge">${badge}</div>` : ''}
-              <img 
-                src="${photoUrl}" 
-                alt="${s.name}" 
-                class="story-image"
-                crossorigin="anonymous"
-                loading="${index < 6 ? 'eager' : 'lazy'}"
-                onerror="this.onerror=null; this.src='https://via.placeholder.com/300x200?text=No+Image';"
-              >
+              <div class="story-image-wrapper">
+                ${badge ? `<div class="story-badge">${badge}</div>` : ''}
+                <img 
+                  src="${photoUrl}" 
+                  alt="${s.name || 'Story'}" 
+                  class="story-image"
+                  loading="${index < 6 ? 'eager' : 'lazy'}"
+                  onerror="${imgOnError}"
+                >
+              </div>
               <div class="story-content">
                 <h3 id="story-title-${s.id}" class="story-name">${s.name || 'Tanpa Nama'}</h3>
                 <p class="story-description">${s.description || 'Tidak ada deskripsi'}</p>
@@ -336,17 +351,23 @@ export default class HomePage {
                 
                 <div class="story-actions">
                   ${isPending ? `
-                    <button class="delete-story-btn" data-id="${s.id}" data-pending="true" data-offline="false" aria-label="Hapus cerita pending">
-                      🗑️ Hapus Pending
+                    <button class="delete-story-btn" data-id="${s.id}" data-pending="true" aria-label="Hapus cerita pending">
+                      🗑️ Hapus Story
                     </button>
-                  ` : isOffline ? `
-                    <button class="delete-story-btn" data-id="${s.id}" data-pending="false" data-offline="true" aria-label="Hapus cerita offline">
-                      🗑️ Hapus dari Cache
+                  ` : isSaved ? `
+                    <a href="#/detail/${s.id.toLowerCase()}" class="story-detail-link" aria-label="Baca detail cerita ${s.name}">
+                      Lihat detail
+                    </a>
+                    <button class="delete-story-btn" data-id="${s.id}" data-saved="true" aria-label="Hapus cerita dari penyimpanan">
+                      🗑️ Hapus Story
                     </button>
                   ` : `
                     <a href="#/detail/${s.id.toLowerCase()}" class="story-detail-link" aria-label="Baca detail cerita ${s.name}">
                       Lihat detail
                     </a>
+                    <button class="save-story-btn" data-id="${s.id}" aria-label="Simpan cerita ke penyimpanan lokal">
+                      💾 Simpan Story
+                    </button>
                   `}
                 </div>
               </div>
@@ -355,11 +376,22 @@ export default class HomePage {
       }).join('')
       : `<div class="no-stories" role="status">Belum ada cerita yang tersedia.</div>`;
 
-    this.setupDeleteButtons();
+    this.setupActionButtons();
   }
 
-  setupDeleteButtons() {
+  setupActionButtons() {
+    const saveButtons = document.querySelectorAll('.save-story-btn');
     const deleteButtons = document.querySelectorAll('.delete-story-btn');
+
+    saveButtons.forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const storyId = btn.dataset.id;
+        await this.#presenter.saveStory(storyId);
+      });
+    });
 
     deleteButtons.forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -368,14 +400,14 @@ export default class HomePage {
 
         const storyId = btn.dataset.id;
         const isPending = btn.dataset.pending === 'true';
-        const isOffline = btn.dataset.offline === 'true';
+        const isSaved = btn.dataset.saved === 'true';
 
-        this.showDeleteConfirmation(storyId, isPending, isOffline);
+        this.showDeleteConfirmation(storyId, isPending, isSaved);
       });
     });
   }
 
-  showDeleteConfirmation(storyId, isPending, isOffline) {
+  showDeleteConfirmation(storyId, isPending, isSaved) {
     const modal = document.getElementById('delete-modal');
     const modalText = document.getElementById('delete-modal-text');
     const confirmBtn = document.getElementById('confirm-delete');
@@ -383,14 +415,14 @@ export default class HomePage {
 
     if (isPending) {
       modalText.textContent = 'Cerita ini belum tersinkronisasi. Yakin ingin menghapusnya?';
-    } else if (isOffline) {
-      modalText.textContent = 'Hapus cerita ini dari cache lokal? (Cerita tidak ada di server)';
+    } else if (isSaved) {
+      modalText.textContent = 'Hapus cerita ini dari penyimpanan lokal?';
     }
 
     modal.style.display = 'flex';
 
     const handleConfirm = async () => {
-      await this.#presenter.deleteStory(storyId, isPending, isOffline);
+      await this.#presenter.deleteStory(storyId, isPending, isSaved);
       modal.style.display = 'none';
       cleanup();
     };
@@ -409,17 +441,17 @@ export default class HomePage {
     cancelBtn.addEventListener('click', handleCancel);
   }
 
-  showClearOfflineConfirmation() {
+  showClearSavedConfirmation() {
     const modal = document.getElementById('delete-modal');
     const modalText = document.getElementById('delete-modal-text');
     const confirmBtn = document.getElementById('confirm-delete');
     const cancelBtn = document.getElementById('cancel-delete');
 
-    modalText.textContent = 'Hapus SEMUA cerita offline dan pending dari cache lokal?';
+    modalText.textContent = 'Hapus SEMUA cerita tersimpan dan pending dari penyimpanan lokal?';
     modal.style.display = 'flex';
 
     const handleConfirm = async () => {
-      await this.#presenter.clearOfflineStories();
+      await this.#presenter.clearSavedStories();
       modal.style.display = 'none';
       cleanup();
     };
@@ -436,6 +468,10 @@ export default class HomePage {
 
     confirmBtn.addEventListener('click', handleConfirm);
     cancelBtn.addEventListener('click', handleCancel);
+  }
+
+  showSaveSuccess(message) {
+    alert(message);
   }
 
   showDeleteSuccess(message) {
@@ -443,21 +479,27 @@ export default class HomePage {
   }
 
   showMapLoading() {
-    document.getElementById('map-loading').style.display = 'block';
-    document.getElementById('stories-loading').style.display = 'block';
+    const mapLoading = document.getElementById('map-loading');
+    const storiesLoading = document.getElementById('stories-loading');
+    if (mapLoading) mapLoading.style.display = 'block';
+    if (storiesLoading) storiesLoading.style.display = 'block';
   }
 
   hideMapLoading() {
-    document.getElementById('map-loading').style.display = 'none';
-    document.getElementById('stories-loading').style.display = 'none';
+    const mapLoading = document.getElementById('map-loading');
+    const storiesLoading = document.getElementById('stories-loading');
+    if (mapLoading) mapLoading.style.display = 'none';
+    if (storiesLoading) storiesLoading.style.display = 'none';
   }
 
   showStoriesLoading() {
-    document.getElementById('stories-loading').style.display = 'block';
+    const el = document.getElementById('stories-loading');
+    if (el) el.style.display = 'block';
   }
 
   hideStoriesLoading() {
-    document.getElementById('stories-loading').style.display = 'none';
+    const el = document.getElementById('stories-loading');
+    if (el) el.style.display = 'none';
   }
 
   showMapError(message) {

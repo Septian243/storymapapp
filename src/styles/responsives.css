@@ -204,6 +204,18 @@ select:focus {
     }
 }
 
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* DESKTOP STYLES */
 @media screen and (min-width: 1024px) {
     .navigation-drawer {
@@ -277,6 +289,21 @@ select:focus {
 
     .drawer-button {
         display: none;
+    }
+
+    .search-box {
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
+
+    .filter-buttons {
+        flex: 1 1 100%;
+        justify-content: flex-start;
+    }
+
+    .sort-wrapper,
+    .action-btn {
+        flex: 0 1 auto;
     }
 }
 
@@ -448,6 +475,50 @@ select:focus {
     .modal-actions .cancel-btn,
     .modal-actions .delete-btn {
         width: 100%;
+    }
+
+    .stories-controls-wrapper {
+        gap: 10px;
+    }
+
+    .search-box,
+    .filter-buttons,
+    .sort-wrapper {
+        width: 100%;
+        flex: 1 1 100%;
+    }
+
+    .filter-buttons {
+        justify-content: space-between;
+    }
+
+    .filter-btn {
+        flex: 1 1 auto;
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+
+    .sort-wrapper {
+        justify-content: space-between;
+    }
+
+    .sort-wrapper select {
+        flex: 1;
+    }
+
+    .action-btn {
+        flex: 1 1 calc(50% - 5px);
+    }
+
+    .stories-count {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .stories-count span {
+        width: 100%;
+        justify-content: center;
     }
 }
 

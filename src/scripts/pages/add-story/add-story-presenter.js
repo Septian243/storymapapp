@@ -210,14 +210,12 @@ export default class AddStoryPresenter {
                 throw new Error(res.message || 'Gagal menambahkan cerita');
             }
 
-            if (res.story) {
-                await IDBHelper.saveStory(res.story);
-                console.log('✅ Story saved to IndexedDB');
-            }
+            console.log('✅ Story uploaded successfully');
 
-            this.#view.showSuccessMessage('🎉 Cerita berhasil ditambahkan! Mengalihkan ke halaman cerita...');
+            this.#view.showSuccessMessage('🎉 Cerita berhasil ditambahkan!');
+            await new Promise(resolve => setTimeout(resolve, 1500));
 
-            setTimeout(() => this.#view.redirectToStories(), 2000);
+            window.location.hash = '#/';
 
         } catch (err) {
             console.error('Save story error:', err);
@@ -265,7 +263,9 @@ export default class AddStoryPresenter {
                 '📴 Anda sedang offline. Cerita disimpan dan akan otomatis diunggah saat online kembali.'
             );
 
-            setTimeout(() => this.#view.redirectToStories(), 3000);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            window.location.hash = '#/';
 
         } catch (error) {
             console.error('Error saving offline story:', error);
