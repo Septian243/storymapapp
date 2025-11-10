@@ -1,0 +1,73 @@
+{
+    "name": "Story Map",
+    "short_name": "StoryMap",
+    "description": "Aplikasi berbagi cerita dengan peta lokasi dan dukungan PWA.",
+    "start_url": "./index.html",
+    "scope": "./",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#1976d2",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "./images/icons/logo-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "./images/icons/logo-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "./images/screenshoot/Screenshot 2025-11-08 230314.png",
+            "sizes": "630x999",
+            "type": "image/png",
+            "label": "Tampilan utama Story Map di mobile"
+        },
+        {
+            "src": "./images/screenshoot/Screenshot 2025-11-08 224437.png",
+            "sizes": "1920x1018",
+            "type": "image/png",
+            "form_factor": "wide",
+            "label": "Tampilan peta cerita di desktop"
+        },
+        {
+            "src": "./images/screenshoot/Screenshot 2025-11-08 224457.png",
+            "sizes": "1920x1018",
+            "type": "image/png",
+            "form_factor": "wide",
+            "label": "Daftar cerita pengguna di desktop"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Tambah Cerita",
+            "short_name": "Tambah",
+            "description": "Tambahkan cerita baru dengan cepat.",
+            "url": "./#/add-story",
+            "icons": [
+                {
+                    "src": "./images/icons/logo-96.png",
+                    "sizes": "96x96",
+                    "type": "image/png"
+                }
+            ]
+        },
+        {
+            "name": "Lihat Cerita",
+            "short_name": "Cerita",
+            "description": "Lihat daftar cerita pengguna.",
+            "url": "./#/",
+            "icons": [
+                {
+                    "src": "./images/icons/logo-96.png",
+                    "sizes": "96x96",
+                    "type": "image/png"
+                }
+            ]
+        }
+    ]
+}
