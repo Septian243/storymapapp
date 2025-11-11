@@ -305,6 +305,18 @@ select:focus {
     .action-btn {
         flex: 0 1 auto;
     }
+
+    .stories-controls-wrapper {
+        gap: 8px;
+    }
+
+    .search-box {
+        flex: 1 1 200px;
+    }
+
+    .sort-wrapper {
+        margin-left: 0;
+    }
 }
 
 @media (max-width: 768px) {
@@ -492,10 +504,25 @@ select:focus {
         justify-content: space-between;
     }
 
+    .stories-controls-wrapper {
+        padding: 12px;
+        gap: 6px;
+    }
+
     .filter-btn {
-        flex: 1 1 auto;
-        padding: 10px 12px;
+        padding: 8px 12px;
         font-size: 13px;
+    }
+
+    .action-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    .search-box {
+        flex: 1 1 100%;
+        max-width: 100%;
+        margin-bottom: 4px;
     }
 
     .sort-wrapper {

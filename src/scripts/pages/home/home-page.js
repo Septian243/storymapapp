@@ -32,7 +32,7 @@ export default class HomePage {
           <div class="stories-header">
             <h2>Cerita Terbaru</h2>
             
-            <!-- Improved Controls Layout -->
+            <!-- Compact Controls Layout -->
             <div class="stories-controls-wrapper">
               <!-- Search Box -->
               <div class="search-box">
@@ -47,20 +47,18 @@ export default class HomePage {
               </div>
               
               <!-- Filter Buttons -->
-              <div class="filter-buttons">
-                <button class="filter-btn active" data-tab="all" aria-label="Tampilkan semua cerita">
-                  Semua
-                </button>
-                <button class="filter-btn" data-tab="online" aria-label="Tampilkan cerita online">
-                  ✅ Online
-                </button>
-                <button class="filter-btn" data-tab="saved" aria-label="Tampilkan cerita tersimpan">
-                  💾 Tersimpan
-                </button>
-                <button class="filter-btn" data-tab="pending" aria-label="Tampilkan cerita pending">
-                  📦 Pending
-                </button>
-              </div>
+              <button class="filter-btn active" data-tab="all" aria-label="Tampilkan semua cerita">
+                Semua
+              </button>
+              <button class="filter-btn" data-tab="online" aria-label="Tampilkan cerita online">
+                ✅ Online
+              </button>
+              <button class="filter-btn" data-tab="saved" aria-label="Tampilkan cerita tersimpan">
+                💾 Tersimpan
+              </button>
+              <button class="filter-btn" data-tab="pending" aria-label="Tampilkan cerita pending">
+                📦 Pending
+              </button>
               
               <!-- Sort Dropdown -->
               <div class="sort-wrapper">

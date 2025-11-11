@@ -1352,9 +1352,9 @@ body.auth-page .drawer-button:hover {
 .stories-controls-wrapper {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
-  padding: 16px;
+  padding: 12px 16px;
   background-color: #f5f5f5;
   border-radius: 8px;
   margin-bottom: 24px;
@@ -1362,9 +1362,8 @@ body.auth-page .drawer-button:hover {
 
 .search-box {
   position: relative;
-  flex: 1 1 200px;
+  flex: 0 1 220px;
   min-width: 180px;
-  max-width: 300px;
 }
 
 .search-icon {
@@ -1392,15 +1391,8 @@ body.auth-page .drawer-button:hover {
   box-shadow: 0 0 0 3px rgba(92, 124, 250, 0.1);
 }
 
-.filter-buttons {
-  display: flex;
-  gap: 8px;
-  flex: 1 1 auto;
-  flex-wrap: wrap;
-}
-
 .filter-btn {
-  padding: 10px 16px;
+  padding: 10px 14px;
   border: 1px solid #ddd;
   border-radius: 6px;
   background-color: white;
@@ -1432,9 +1424,10 @@ body.auth-page .drawer-button:hover {
 .sort-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex: 0 1 auto;
+  gap: 6px;
+  flex: 0 0 auto;
   white-space: nowrap;
+  margin-left: auto;
 }
 
 .sort-wrapper label {
@@ -1455,7 +1448,7 @@ body.auth-page .drawer-button:hover {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
-  min-width: 140px;
+  min-width: 130px;
 }
 
 .sort-wrapper select:focus {
@@ -1465,7 +1458,7 @@ body.auth-page .drawer-button:hover {
 }
 
 .action-btn {
-  padding: 10px 16px;
+  padding: 10px 14px;
   border: none;
   border-radius: 6px;
   font-size: 14px;
