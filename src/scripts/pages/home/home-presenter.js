@@ -365,65 +365,44 @@ export default class HomePresenter {
     }
 
     async saveStory(storyId) {
-        try {
-            let story = this.#lastApiStories.find(s => s.id === storyId);
+        let story = this.#lastApiStories.find(s => s.id === storyId);
 
-            if (!story && navigator.onLine) {
-                const response = await this.#model.getStories();
+        if (!story && navigator.onLine) {
+            const response = await this.#model.getStories();
 
-                if (!response.error && response.listStory) {
-                    story = response.listStory.find(s => s.id === storyId);
-                }
+            if (!response.error && response.listStory) {
+                story = response.listStory.find(s => s.id === storyId);
             }
-
-            if (story) {
-                await IDBHelper.saveStory(story);
-                console.log('✅ Story saved:', storyId);
-                this.#view.showSaveSuccess('Cerita berhasil disimpan!');
-                await this.#refilterStories();
-            } else {
-                this.#view.showGlobalError('Cerita tidak ditemukan.');
-            }
-        } catch (error) {
-            console.error('Error saving story:', error);
-            this.#view.showGlobalError('Gagal menyimpan cerita: ' + error.message);
         }
+
+        if (!story) {
+            throw new Error('Cerita tidak ditemukan');
+        }
+
+        await IDBHelper.saveStory(story);
+        console.log('✅ Story saved:', storyId);
+        await this.#refilterStories();
     }
 
     async deleteStory(storyId, isPending, isSaved) {
-        try {
-            if (isPending) {
-                const tempId = parseInt(storyId.replace('pending-', ''));
-                await IDBHelper.deletePendingStory(tempId);
-                console.log('✅ Deleted pending story:', tempId);
-                this.#view.showDeleteSuccess('Cerita pending berhasil dihapus!');
-            } else if (isSaved) {
-                await IDBHelper.deleteStory(storyId);
-                console.log('✅ Deleted saved story:', storyId);
-                this.#view.showDeleteSuccess('Cerita berhasil dihapus dari penyimpanan!');
-            }
-
-            await this.#refilterStories();
-
-        } catch (error) {
-            console.error('Error deleting story:', error);
-            this.#view.showGlobalError('Gagal menghapus cerita: ' + error.message);
+        if (isPending) {
+            const tempId = parseInt(storyId.replace('pending-', ''));
+            await IDBHelper.deletePendingStory(tempId);
+            console.log('✅ Deleted pending story:', tempId);
+        } else if (isSaved) {
+            await IDBHelper.deleteStory(storyId);
+            console.log('✅ Deleted saved story:', storyId);
         }
+
+        await this.#refilterStories();
     }
 
     async clearSavedStories() {
-        try {
-            await IDBHelper.clearAllStories();
-            await IDBHelper.clearPendingStories();
+        await IDBHelper.clearAllStories();
+        await IDBHelper.clearPendingStories();
 
-            console.log('✅ All saved and pending stories cleared');
-            this.#view.showDeleteSuccess('Semua cerita tersimpan dan pending berhasil dihapus!');
+        console.log('✅ All saved and pending stories cleared');
 
-            await this.#refilterStories();
-
-        } catch (error) {
-            console.error('Error clearing saved stories:', error);
-            this.#view.showGlobalError('Gagal menghapus cerita tersimpan: ' + error.message);
-        }
+        await this.#refilterStories();
     }
 }

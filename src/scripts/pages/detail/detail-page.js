@@ -150,7 +150,7 @@ export default class DetailPage {
       <p>${story.description}</p>
     </div>
 
-    <div class="story-image-wrapper">
+    <div class="story-image-wrapper-detail">
       <img 
         src="${story.photoUrl}" 
         alt="${story.name}" 

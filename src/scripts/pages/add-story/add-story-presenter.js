@@ -5,6 +5,7 @@ export default class AddStoryPresenter {
     #view;
     #model;
     #cameraPhoto = null;
+    #isSubmitting = false;
     selectedLat = null;
     selectedLon = null;
 
@@ -75,6 +76,11 @@ export default class AddStoryPresenter {
     }
 
     async #handleFormSubmit() {
+        if (this.#isSubmitting) {
+            console.warn('⚠️ Submission already in progress, ignoring duplicate submit');
+            return;
+        }
+
         const { description, photo } = this.#view.getFormData();
         const finalPhoto = this.#cameraPhoto || photo;
 
@@ -172,7 +178,13 @@ export default class AddStoryPresenter {
     }
 
     async saveStory({ description, photo, lat, lon }) {
+        if (this.#isSubmitting) {
+            console.warn('⚠️ Already submitting, ignoring duplicate call');
+            return;
+        }
+
         try {
+            this.#isSubmitting = true;
             this.#view.setSubmitButtonState(true);
             this.#view.hideErrorMessage();
 
@@ -202,9 +214,9 @@ export default class AddStoryPresenter {
 
             console.log('🌐 Uploading story to server...');
 
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            const res = await this.#model.addStory(formData);
+            const minLoadingTime = new Promise(resolve => setTimeout(resolve, 1500));
+            const uploadPromise = this.#model.addStory(formData);
+            const [res] = await Promise.all([uploadPromise, minLoadingTime]);
 
             if (res.error) {
                 throw new Error(res.message || 'Gagal menambahkan cerita');
@@ -212,10 +224,15 @@ export default class AddStoryPresenter {
 
             console.log('✅ Story uploaded successfully');
 
-            this.#view.showSuccessMessage('🎉 Cerita berhasil ditambahkan!');
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            this.#view.hideSubmitLoading();
 
-            window.location.hash = '#/';
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            this.#view.showSuccessMessage('🎉 Cerita berhasil ditambahkan!');
+
+            setTimeout(() => {
+                window.location.hash = '#/';
+            }, 1500);
 
         } catch (err) {
             console.error('Save story error:', err);
@@ -234,7 +251,10 @@ export default class AddStoryPresenter {
                 this.#view.showErrorMessage('❌ Gagal menambahkan cerita: ' + err.message);
             }
         } finally {
-            this.#view.setSubmitButtonState(false);
+            if (!window.location.hash.includes('#/')) {
+                this.#isSubmitting = false;
+                this.#view.setSubmitButtonState(false);
+            }
         }
     }
 
@@ -263,13 +283,14 @@ export default class AddStoryPresenter {
                 '📴 Anda sedang offline. Cerita disimpan dan akan otomatis diunggah saat online kembali.'
             );
 
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            window.location.hash = '#/';
+            setTimeout(() => {
+                window.location.hash = '#/';
+            }, 2000);
 
         } catch (error) {
             console.error('Error saving offline story:', error);
             this.#view.showErrorMessage('❌ Gagal menyimpan cerita offline: ' + error.message);
+            this.#isSubmitting = false;
         }
     }
 
@@ -302,6 +323,7 @@ export default class AddStoryPresenter {
 
     cleanup() {
         try {
+            this.#isSubmitting = false;
             this.#view.cleanup();
         } catch (error) {
             console.warn('Cleanup error:', error);

@@ -3,6 +3,7 @@ import Auth from '../../utils/auth';
 import Api from '../../data/api';
 import Map from '../../utils/map';
 import PushSubscriptionHelper from '../../utils/push-subscription';
+import Swal from 'sweetalert2';
 
 export default class HomePage {
   #presenter = null;
@@ -87,18 +88,6 @@ export default class HomePage {
           <div id="stories-count" class="stories-count"></div>
           <div id="stories-list" class="stories-grid"></div>
         </section>
-      </div>
-
-      <!-- Modal Konfirmasi Delete -->
-      <div id="delete-modal" class="modal" style="display:none;" role="dialog" aria-labelledby="delete-modal-title" aria-modal="true">
-        <div class="modal-content">
-          <h2 id="delete-modal-title">Konfirmasi</h2>
-          <p id="delete-modal-text">Apakah Anda yakin?</p>
-          <div class="modal-actions">
-            <button id="cancel-delete" class="cancel-btn">Batal</button>
-            <button id="confirm-delete" class="delete-btn">Ya</button>
-          </div>
-        </div>
       </div>
     `;
   }
@@ -387,7 +376,7 @@ export default class HomePage {
         e.stopPropagation();
 
         const storyId = btn.dataset.id;
-        await this.#presenter.saveStory(storyId);
+        await this.showSaveConfirmation(storyId);
       });
     });
 
@@ -405,75 +394,117 @@ export default class HomePage {
     });
   }
 
-  showDeleteConfirmation(storyId, isPending, isSaved) {
-    const modal = document.getElementById('delete-modal');
-    const modalText = document.getElementById('delete-modal-text');
-    const confirmBtn = document.getElementById('confirm-delete');
-    const cancelBtn = document.getElementById('cancel-delete');
+  async showSaveConfirmation(storyId) {
+    const result = await Swal.fire({
+      title: '💾 Simpan Cerita?',
+      text: 'Cerita akan disimpan di penyimpanan lokal Anda',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Ya, Simpan!',
+      cancelButtonText: 'Batal',
+      showLoaderOnConfirm: true,
+      allowOutsideClick: () => !Swal.isLoading(),
+      preConfirm: async () => {
+        try {
+          await this.#presenter.saveStory(storyId);
+          return true;
+        } catch (error) {
+          Swal.showValidationMessage(`Gagal menyimpan: ${error.message}`);
+          return false;
+        }
+      }
+    });
+
+    if (result.isConfirmed) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: 'Cerita berhasil disimpan!',
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    }
+  }
+
+  async showDeleteConfirmation(storyId, isPending, isSaved) {
+    let titleText = 'Hapus Cerita?';
+    let bodyText = 'Apakah Anda yakin ingin menghapus cerita ini?';
 
     if (isPending) {
-      modalText.textContent = 'Cerita ini belum tersinkronisasi. Yakin ingin menghapusnya?';
+      titleText = 'Hapus Cerita Pending?';
+      bodyText = 'Cerita ini belum tersinkronisasi. Yakin ingin menghapusnya?';
     } else if (isSaved) {
-      modalText.textContent = 'Hapus cerita ini dari penyimpanan lokal?';
+      titleText = 'Hapus dari Penyimpanan?';
+      bodyText = 'Hapus cerita ini dari penyimpanan lokal Anda?';
     }
 
-    modal.style.display = 'flex';
+    const result = await Swal.fire({
+      title: titleText,
+      text: bodyText,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Ya, Hapus!',
+      cancelButtonText: 'Batal',
+      showLoaderOnConfirm: true,
+      allowOutsideClick: () => !Swal.isLoading(),
+      preConfirm: async () => {
+        try {
+          await this.#presenter.deleteStory(storyId, isPending, isSaved);
+          return true;
+        } catch (error) {
+          Swal.showValidationMessage(`Gagal menghapus: ${error.message}`);
+          return false;
+        }
+      }
+    });
 
-    const handleConfirm = async () => {
-      await this.#presenter.deleteStory(storyId, isPending, isSaved);
-      modal.style.display = 'none';
-      cleanup();
-    };
-
-    const handleCancel = () => {
-      modal.style.display = 'none';
-      cleanup();
-    };
-
-    const cleanup = () => {
-      confirmBtn.removeEventListener('click', handleConfirm);
-      cancelBtn.removeEventListener('click', handleCancel);
-    };
-
-    confirmBtn.addEventListener('click', handleConfirm);
-    cancelBtn.addEventListener('click', handleCancel);
+    if (result.isConfirmed) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Terhapus!',
+        text: 'Cerita berhasil dihapus!',
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    }
   }
 
-  showClearSavedConfirmation() {
-    const modal = document.getElementById('delete-modal');
-    const modalText = document.getElementById('delete-modal-text');
-    const confirmBtn = document.getElementById('confirm-delete');
-    const cancelBtn = document.getElementById('cancel-delete');
+  async showClearSavedConfirmation() {
+    const result = await Swal.fire({
+      title: 'Hapus Semua Cache?',
+      html: '<strong>Hapus SEMUA cerita tersimpan dan pending dari penyimpanan lokal?</strong><br><small>Tindakan ini tidak dapat dibatalkan!</small>',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Ya, Hapus Semua!',
+      cancelButtonText: 'Batal',
+      showLoaderOnConfirm: true,
+      allowOutsideClick: () => !Swal.isLoading(),
+      preConfirm: async () => {
+        try {
+          await this.#presenter.clearSavedStories();
+          return true;
+        } catch (error) {
+          Swal.showValidationMessage(`Gagal menghapus: ${error.message}`);
+          return false;
+        }
+      }
+    });
 
-    modalText.textContent = 'Hapus SEMUA cerita tersimpan dan pending dari penyimpanan lokal?';
-    modal.style.display = 'flex';
-
-    const handleConfirm = async () => {
-      await this.#presenter.clearSavedStories();
-      modal.style.display = 'none';
-      cleanup();
-    };
-
-    const handleCancel = () => {
-      modal.style.display = 'none';
-      cleanup();
-    };
-
-    const cleanup = () => {
-      confirmBtn.removeEventListener('click', handleConfirm);
-      cancelBtn.removeEventListener('click', handleCancel);
-    };
-
-    confirmBtn.addEventListener('click', handleConfirm);
-    cancelBtn.addEventListener('click', handleCancel);
-  }
-
-  showSaveSuccess(message) {
-    alert(message);
-  }
-
-  showDeleteSuccess(message) {
-    alert(message);
+    if (result.isConfirmed) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Cache Terhapus!',
+        text: 'Semua cerita tersimpan dan pending berhasil dihapus!',
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    }
   }
 
   showMapLoading() {
@@ -518,7 +549,13 @@ export default class HomePage {
   }
 
   showGlobalError(message) {
-    alert(message);
+    Swal.fire({
+      title: '❌ Error',
+      text: message,
+      icon: 'error',
+      confirmButtonColor: '#667eea',
+      confirmButtonText: 'OK'
+    });
   }
 
   #formatDate(date) {

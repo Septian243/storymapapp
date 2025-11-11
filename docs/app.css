@@ -817,7 +817,7 @@ body.auth-page .drawer-button:hover {
   margin: 0 0.3rem;
 }
 
-.story-image-wrapper {
+.story-image-wrapper-detail {
   display: flex;
   justify-content: center;
   width: 100%;
@@ -825,7 +825,7 @@ body.auth-page .drawer-button:hover {
 
 .story-detail-image {
   width: 100%;
-  max-height: 25rem;
+  max-height: 30rem;
   object-fit: cover;
   border-radius: 0.5rem;
   margin-bottom: 1.5rem;
