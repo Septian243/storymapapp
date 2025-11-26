@@ -1,6 +1,6 @@
-# App Starter Project with Webpack
+# Story Map Project with Webpack
 
-Proyek ini adalah setup dasar untuk aplikasi web yang menggunakan webpack untuk proses bundling, Babel untuk transpile JavaScript, serta mendukung proses build dan serving aplikasi.
+Proyek Story Map ini adalah aplikasi web berbasis Webpack dengan struktur modular, mencakup PWA support, routing, data layer menggunakan API & IndexedDB, serta berbagai utilitas untuk kamera, notifikasi, peta, dan background sync. Dirancang untuk mudah dikembangkan dan dioptimalkan untuk production.
 
 ## Table of Contents
 
